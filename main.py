@@ -19,7 +19,7 @@ def run_web_server():
     server.serve_forever()
 
 # ----------------- বটের মূল কোড -----------------
-BOT_TOKEN = "8697610230:AAFwXt7o_9zW_EolaYYwSV54jYRNmYNOgAo"  # আপনার সম্পূর্ণ আসল বট টোকেনটি এখানে দিন
+BOT_TOKEN = "8697610230:AAFzzjFmO_VzOeC48v6Rf51uRkv2R15J23Q"  # আপনার সম্পূর্ণ আসল বট টোকেনটি এখানে দিন
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Salam! Send me any video link (FB, Insta, TikTok, YouTube), and I will download it for you.")
