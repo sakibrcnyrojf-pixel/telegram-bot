@@ -7,7 +7,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
 # ----------------- ১. চ্যানেল সেটআপ (আপনার চ্যানেলের ইউজারনেম দিন) -----------------
-CHANNEL_USERNAME = "@YourChannelUsername"  # এখানে @ সহ আপনার টেলিগ্রাম চ্যানেলের ইউজারনেম দিন
+CHANNEL_USERNAME = "@RMEarning9"  # এখানে @ সহ আপনার টেলিগ্রাম চ্যানেলের ইউজারনেম দিন
 
 # ----------------- ২. Render Port Timeout হ্যান্ডলার -----------------
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
