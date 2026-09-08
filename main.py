@@ -9,6 +9,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, Cal
 
 # ----------------- ১. চ্যানেল সেটআপ -----------------
 CHANNEL_USERNAME = "@RMEarning9" 
+CHANNEL_LINK = "https://t.me/RMEarning9"
 
 # ----------------- ২. Render Port Timeout হ্যান্ডলার -----------------
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
@@ -18,7 +19,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(b"Bot is running 24/7!")
 
 def run_web_server():
-    port = int(os.environ.get("PORT", 8080))
+    port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
     server.serve_forever()
 
@@ -34,7 +35,7 @@ async def is_user_joined(bot, user_id):
     return False
 
 # ----------------- ৪. বট কমান্ড হ্যান্ডলার -----------------
-BOT_TOKEN = "8697610230:AAFl8OwyA15q3cKQeafupUIYgjWkaHZWWzY"
+BOT_TOKEN = "8697610230:AAGu7TpAnUzZMeSdXNo5z3LrGHz4gGtWRgs"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -44,7 +45,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Salam! Send me any TikTok, Facebook, YouTube, or Instagram video link to download.")
     else:
         keyboard = [
-            [InlineKeyboardButton("📢 Join Channel", url=f"https://t.me/{CHANNEL_USERNAME.replace('@', '')}")],
+            [InlineKeyboardButton("📢 Join Channel", url=CHANNEL_LINK)],
             [InlineKeyboardButton("✅ Joined / Verify", callback_data="check_join")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -61,11 +62,11 @@ async def check_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     joined = await is_user_joined(context.bot, user_id)
     
     if joined:
-        await query.message.edit_text("✅ ধন্যবাদ! চ্যানেল জয়েন সফল হয়েছে। এখন যেকোনো লিংক পাঠাতে পারেন।")
+        await query.message.edit_text("✅ ধন্যবাদ! চ্যানেল জয়েন সফল হয়েছে। এখন যেকোনো লিঙ্ক পাঠাতে পারেন।")
     else:
         await query.message.reply_text("❌ আপনি এখনো চ্যানেলে জয়েন করেননি! আগে জয়েন করুন, তারপর আবার বোতামে চাপুন।")
 
-# ----------------- ৫. ভিডিও ডাউনলোডার ফাংশন -----------------
+# ----------------- ৫. ভিডিও ডাউনলোডার -----------------
 def get_video_direct_url(url):
     ydl_opts = {
         'format': 'best',
@@ -83,11 +84,10 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not url.startswith("http"):
         return
 
-    # চ্যানেল জয়েন চেক
     joined = await is_user_joined(context.bot, user_id)
     if not joined:
         keyboard = [
-            [InlineKeyboardButton("📢 Join Channel", url=f"https://t.me/{CHANNEL_USERNAME.replace('@', '')}")],
+            [InlineKeyboardButton("📢 Join Channel", url=CHANNEL_LINK)],
             [InlineKeyboardButton("✅ Joined / Verify", callback_data="check_join")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -97,7 +97,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("Downloading video, please wait...")
 
     try:
-        # ১. TikTok (Tikwm API দিয়ে ফাস্ট ডাউনলোড)
+        # ১. TikTok 
         if "tiktok.com" in url:
             api_url = f"https://www.tikwm.com/api/?url={url}"
             res = requests.get(api_url).json()
@@ -106,7 +106,16 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await msg.delete()
                 return
 
-        # ২. FB / IG / YT / অন্যান্য সব লিংক (yt-dlp দিয়ে)
+        # ২. Instagram (429 Error এড়াতে API ব্যবহার)
+        elif "instagram.com" in url:
+            api_url = f"https://aero-api.vercel.app/api/instagram?url={url}"
+            res = requests.get(api_url).json()
+            if "url" in res:
+                await context.bot.send_video(chat_id=update.effective_chat.id, video=res["url"], caption="✨ Instagram Video")
+                await msg.delete()
+                return
+
+        # ৩. Facebook, YouTube এবং অন্যান্য
         loop = asyncio.get_event_loop()
         video_url, title = await loop.run_in_executor(None, get_video_direct_url, url)
 
@@ -118,10 +127,10 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             await msg.delete()
         else:
-            await msg.edit_text("ভিডিওর লিংক প্রসেস করা সম্ভব হয়নি!")
+            await msg.edit_text("ভিডিওর লিঙ্ক প্রসেস করা সম্ভব হয়নি!")
 
     except Exception as e:
-        await msg.edit_text("ভিডিওটি প্রসেস করতে সমস্যা হয়েছে। অন্য কোনো পাবলিক ভিডিও লিংক চেষ্টা করুন!")
+        await msg.edit_text("ভিডিওটি প্রসেস করতে সমস্যা হয়েছে। অন্য কোনো ভিডিও লিঙ্ক চেষ্টা করুন!")
 
 # ----------------- ৬. মেইন এক্সিকিউশন -----------------
 if __name__ == '__main__':
