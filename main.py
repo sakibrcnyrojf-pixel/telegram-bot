@@ -111,7 +111,7 @@ if __name__ == '__main__':
     threading.Thread(target=run_web_server, daemon=True).start()
 
     # বট অ্যাপ্লিকেশন চালু
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = ApplicationBuilder().token(8697610230:AAFzzjFmO_VzOeC48v6Rf51uRkv2R15J23Q).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(check_join_callback, pattern="^check_join$"))
