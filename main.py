@@ -8,7 +8,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
 # ----------------- ১. চ্যানেল সেটআপ -----------------
-CHANNEL_USERNAME = "@rm_download_bot" 
+CHANNEL_USERNAME = "@RMEarning9" 
 
 # ----------------- ২. Render Port Timeout হ্যান্ডলার -----------------
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
