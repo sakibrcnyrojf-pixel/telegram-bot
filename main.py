@@ -1,4 +1,5 @@
 import os
+import requests
 import asyncio
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
@@ -28,6 +29,28 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text
     if not url.startswith("http"):
         return
+
+    msg = await update.message.reply_text("Downloading video, please wait...")
+
+    try:
+        api_url = f"https://www.tikwm.com/api/?url={url}"
+        response = requests.get(api_url).json()
+
+        if response.get("code") == 0:
+            video_url = response["data"]["play"]
+            caption = response["data"].get("title", "Downloaded Video")
+            
+            await context.bot.send_video(
+                chat_id=update.effective_chat.id,
+                video=video_url,
+                caption=f"✨ {caption}"
+            )
+            await msg.delete()
+        else:
+            await msg.edit_text("ভিডিওটি পাওয়া যায়নি বা লিংকটি ভুল!")
+
+    except Exception as e:
+        await msg.edit_text(f"Error: {str(e)}")
 
     msg = await update.message.reply_text("Downloading video, please wait...")
     ydl_opts = {
