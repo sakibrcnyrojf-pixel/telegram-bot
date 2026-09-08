@@ -31,10 +31,24 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     msg = await update.message.reply_text("Downloading video, please wait...")
     ydl_opts = {
-        'format': 'best',
-        'outtmpl': 'downloaded_video.%(ext)s',
-        'max_filesize': 50 * 1024 * 1024, # ৫০ এমবির বেশি হলে ডাউনলোড হবে না (টেলিগ্রাম লিমিট)
+    'format': 'best',
+    'quiet': True,
+    'no_warnings': True,
+    # TikTok IP Block bypass headers
+    'http_headers': {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+    },
+    'extractor_args': {
+        'tiktok': {
+            'app_version': '30.8.4',
+            'manifest_app_version': '30.8.4',
+        }
     }
+    }
+        
+    
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
