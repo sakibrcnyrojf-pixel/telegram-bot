@@ -1,13 +1,14 @@
 import os
 import requests
 import asyncio
-from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
+import yt_dlp
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
 # ----------------- ১. চ্যানেল সেটআপ -----------------
-CHANNEL_USERNAME = "@RMEarning9" 
+CHANNEL_USERNAME = "@rm_download_bot" 
 
 # ----------------- ২. Render Port Timeout হ্যান্ডলার -----------------
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
@@ -33,7 +34,7 @@ async def is_user_joined(bot, user_id):
     return False
 
 # ----------------- ৪. বট কমান্ড হ্যান্ডলার -----------------
-BOT_TOKEN = "8697610230:AAFUChryG7XjOt_Cu25tYXmWCKY0_colmq8"
+BOT_TOKEN = "8697610230:AAFzzjFmO_VzOeC48vRf51uRkQY14rU14uU"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -64,7 +65,17 @@ async def check_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         await query.message.reply_text("❌ আপনি এখনো চ্যানেলে জয়েন করেননি! আগে জয়েন করুন, তারপর আবার বোতামে চাপুন।")
 
-# ----------------- ৫. অল-ইন-ওয়ান ভিডিও ডাউনলোডার -----------------
+# ----------------- ৫. ভিডিও ডাউনলোডার ফাংশন -----------------
+def get_video_direct_url(url):
+    ydl_opts = {
+        'format': 'best',
+        'quiet': True,
+        'no_warnings': True,
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+        return info.get('url'), info.get('title', 'Video')
+
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     url = update.message.text.strip()
@@ -86,44 +97,31 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("Downloading video, please wait...")
 
     try:
-        # ১. TikTok ডাউনলোড
+        # ১. TikTok (Tikwm API দিয়ে ফাস্ট ডাউনলোড)
         if "tiktok.com" in url:
             api_url = f"https://www.tikwm.com/api/?url={url}"
             res = requests.get(api_url).json()
             if res.get("code") == 0:
                 await context.bot.send_video(chat_id=update.effective_chat.id, video=res["data"]["play"], caption="✨ TikTok Video")
                 await msg.delete()
-            else:
-                await msg.edit_text("টিকটক ভিডিওটি পাওয়া যায়নি!")
+                return
 
-        # ২. Instagram ডাউনলোড
-        elif "instagram.com" in url:
-            api_url = f"https://aero-api.vercel.app/api/instagram?url={url}"
-            res = requests.get(api_url).json()
-            if "url" in res:
-                await context.bot.send_video(chat_id=update.effective_chat.id, video=res["url"], caption="✨ Instagram Video")
-                await msg.delete()
-            else:
-                await msg.edit_text("ইনস্টাগ্রাম ভিডিও ডাউনলোড করা সম্ভব হয়নি!")
+        # ২. FB / IG / YT / অন্যান্য সব লিংক (yt-dlp দিয়ে)
+        loop = asyncio.get_event_loop()
+        video_url, title = await loop.run_in_executor(None, get_video_direct_url, url)
 
-        # ৩. Facebook / YouTube ডাউনলোড (Universal API)
-        elif "facebook.com" in url or "fb.watch" in url or "youtube.com" in url or "youtu.be" in url:
-            api_url = f"https://api.cobalt.tools/api/json"
-            headers = {"Accept": "application/json", "Content-Type": "application/json"}
-            payload = {"url": url}
-            
-            res = requests.post(api_url, json=payload, headers=headers).json()
-            if "url" in res:
-                await context.bot.send_video(chat_id=update.effective_chat.id, video=res["url"], caption="✨ Downloaded Video")
-                await msg.delete()
-            else:
-                await msg.edit_text("ভিডিওটি প্রসেস করা সম্ভব হয়নি! লিংকটি সঠিক কিনা যাচাই করুন।")
-
+        if video_url:
+            await context.bot.send_video(
+                chat_id=update.effective_chat.id,
+                video=video_url,
+                caption=f"✨ {title[:100]}"
+            )
+            await msg.delete()
         else:
-            await msg.edit_text("শুধুমাত্র TikTok, Facebook, YouTube এবং Instagram এর লিংক সাপোর্ট করবে!")
+            await msg.edit_text("ভিডিওর লিংক প্রসেস করা সম্ভব হয়নি!")
 
     except Exception as e:
-        await msg.edit_text("সার্ভার ত্রুটি! কিছুক্ষণ পর আবার চেষ্টা করুন।")
+        await msg.edit_text("ভিডিওটি প্রসেস করতে সমস্যা হয়েছে। অন্য কোনো পাবলিক ভিডিও লিংক চেষ্টা করুন!")
 
 # ----------------- ৬. মেইন এক্সিকিউশন -----------------
 if __name__ == '__main__':
