@@ -34,7 +34,7 @@ async def is_user_joined(bot, user_id):
     return False
 
 # ----------------- ৪. বট কমান্ড হ্যান্ডলার -----------------
-BOT_TOKEN = "8697610230:AAFzzjFmO_VzOeC48vRf51uRkQY14rU14uU"
+BOT_TOKEN = "8697610230:AAGUKFrXlDBpboeQJQppGaO17TzilvIoeAU"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
