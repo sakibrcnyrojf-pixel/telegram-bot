@@ -3,11 +3,13 @@ import requests
 import asyncio
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
-import yt_dlp
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
-# Render-এর Port Timeout এরর বন্ধ করার জন্য ফেক ওয়েব সার্ভার
+# ----------------- ১. চ্যানেল সেটআপ (আপনার চ্যানেলের ইউজারনেম দিন) -----------------
+CHANNEL_USERNAME = "@RMEarning9"  # এখানে @ সহ আপনার টেলিগ্রাম চ্যানেলের ইউজারনেম দিন
+
+# ----------------- ২. Render Port Timeout হ্যান্ডলার -----------------
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -19,15 +21,66 @@ def run_web_server():
     server = HTTPServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
     server.serve_forever()
 
-# ----------------- বটের মূল কোড -----------------
-BOT_TOKEN = "8697610230:AAFzzjFmO_VzOeC48v6Rf51uRkv2R15J23Q"  # আপনার সম্পূর্ণ আসল বট টোকেনটি এখানে দিন
+# ----------------- ৩. জয়েন ভেরিফিকেশন ফাংশন -----------------
+async def is_user_joined(bot, user_id):
+    try:
+        member = await bot.get_chat_member(chat_id=CHANNEL_USERNAME, user_id=user_id)
+        if member.status in ['member', 'administrator', 'creator']:
+            return True
+    except Exception as e:
+        print(f"Check Join Error: {e}")
+        return False
+    return False
+
+# ----------------- ৪. বট কমান্ড হ্যান্ডলার -----------------
+BOT_TOKEN = "8697610230:AAFzzjFmO_VzOeC48vRf51uRkQY14rU14uU"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Salam! Send me any video link (FB, Insta, TikTok, YouTube), and I will download it for you.")
+    user_id = update.effective_user.id
+    joined = await is_user_joined(context.bot, user_id)
+    
+    if joined:
+        await update.message.reply_text("Salam! Send me any TikTok video link to download.")
+    else:
+        keyboard = [
+            [InlineKeyboardButton("📢 Join Channel", url=f"https://t.me/{CHANNEL_USERNAME.replace('@', '')}")],
+            [InlineKeyboardButton("✅ Joined / Verify", callback_data="check_join")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(
+            "⚠️ বটটি ব্যবহার করতে আপনাকে প্রথমে আমাদের চ্যানেলে জয়েন হতে হবে!", 
+            reply_markup=reply_markup
+        )
 
+async def check_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    joined = await is_user_joined(context.bot, user_id)
+    
+    if joined:
+        await query.message.edit_text("✅ ধন্যবাদ! চ্যানেল জয়েন সফল হয়েছে। এখন যেকোনো টিকটক লিংক পাঠাতে পারেন।")
+    else:
+        await query.message.reply_text("❌ আপনি এখনো চ্যানেলে জয়েন করেননি! আগে জয়েন করুন, তারপর আবার বোতামে চাপুন।")
+
+# ----------------- ৫. টিকটক ভিডিও ডাউনলোড -----------------
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
     url = update.message.text
+
     if not url.startswith("http"):
+        return
+
+    # চ্যানেল জয়েন চেক
+    joined = await is_user_joined(context.bot, user_id)
+    if not joined:
+        keyboard = [
+            [InlineKeyboardButton("📢 Join Channel", url=f"https://t.me/{CHANNEL_USERNAME.replace('@', '')}")],
+            [InlineKeyboardButton("✅ Joined / Verify", callback_data="check_join")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("⚠️ ভিডিও ডাউনলোড করতে আগে চ্যানেলে জয়েন করুন!", reply_markup=reply_markup)
         return
 
     msg = await update.message.reply_text("Downloading video, please wait...")
@@ -52,54 +105,17 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await msg.edit_text(f"Error: {str(e)}")
 
-    msg = await update.message.reply_text("Downloading video, please wait...")
-    ydl_opts = {
-    'format': 'best',
-    'quiet': True,
-    'no_warnings': True,
-    # TikTok IP Block bypass headers
-    'http_headers': {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-    },
-    'extractor_args': {
-        'tiktok': {
-            'app_version': '30.8.4',
-            'manifest_app_version': '30.8.4',
-        }
-    }
-    }
-        
-    
-
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
-
-        await msg.edit_text("Uploading to Telegram...")
-        with open(filename, 'rb') as video_file:
-            await update.message.reply_video(video=video_file)
-        
-        if os.path.exists(filename):
-            os.remove(filename)
-        await msg.delete()
-
-    except Exception as e:
-        await msg.edit_text(f"Error: {str(e)}")
-
-def main():
-    # ব্যাকগ্রাউন্ডে ওয়েব সার্ভার চালু রাখা
+# ----------------- ৬. মেইন এক্সিকিউশন -----------------
+if __name__ == '__main__':
+    # ওয়েব সার্ভার ব্যাকগ্রাউন্ডে চালু করা
     threading.Thread(target=run_web_server, daemon=True).start()
 
-    # বট সার্ভিস চালু
+    # বট অ্যাপ্লিকেশন চালু
     app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
-    
-    print("Bot speed testing & polling active...")
-    app.run_polling()
 
-if __name__ == "__main__":
-    main()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(check_join_callback, pattern="^check_join$"))
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), download_video))
+
+    print("Bot is running...")
+    app.run_polling()
