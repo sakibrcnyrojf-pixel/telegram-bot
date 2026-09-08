@@ -1,2 +1,3 @@
+import requests
 yt-dlp>=2026.01.01
 python-telegram-bot>=20.0
